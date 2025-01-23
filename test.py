@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Optional
-import openai   
+import openai
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
@@ -21,12 +21,14 @@ logs_collection = db["logs"]
 
 openai.api_key = open_ai_key
 
-llama_pipe = pipeline("text-generation", model=llama_model_name, api_key=hugging_face_api_key, device=0)
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = hugging_face_api_key
+
+llama_pipe = pipeline("text-generation", model=llama_model_name, use_auth_token=hugging_face_api_key, device=0)
 
 class QueryInput(BaseModel):
     query: str
     user_id: Optional[str] = None
-    model_choice: int  # 1 for OpenAI, 2 for Llama
+    model_choice: int  
 
 def log_interaction(query: str, response: str, metadata: Dict):
     log_entry = {
