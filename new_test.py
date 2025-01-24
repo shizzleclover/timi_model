@@ -6,29 +6,38 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
 from transformers import pipeline
+from huggingface_hub import notebook_login
+import uvicorn
 
 app = FastAPI()
+
+# Load environment variables from .env file
 load_dotenv()
 
+# Log in to Hugging Face Hub (interactive login)
+notebook_login()
+
+# Get the MongoDB and OpenAI keys from environment variables
 mongo_url = os.getenv("MONGO_URL")
 open_ai_key = os.getenv("API_KEY")
 hugging_face_api_key = os.getenv("HUGGING_FACE_API_KEY")
 llama_model_name = "meta-llama/Llama-3.1-8B-Instruct"
 
+# Database connection
 client = MongoClient(mongo_url)
 db = client["case_bud_dev"]
 logs_collection = db["logs"]
 
+# OpenAI setup
 openai.api_key = open_ai_key
 
-os.environ["HUGGINGFACEHUB_API_TOKEN"] = hugging_face_api_key
-
-llama_pipe = pipeline("text-generation", model=llama_model_name, use_auth_token=hugging_face_api_key, device=0)
+# Hugging Face setup
+llama_pipe = pipeline("text-generation", model=llama_model_name, device=0)
 
 class QueryInput(BaseModel):
     query: str
     user_id: Optional[str] = None
-    model_choice: int  
+    model_choice: int  # 1 for OpenAI, 2 for Llama
 
 def log_interaction(query: str, response: str, metadata: Dict):
     log_entry = {
@@ -73,3 +82,6 @@ async def legal_assistant(query_input: QueryInput):
 @app.get("/")
 def health_check():
     return {"status": "running", "message": "Legal AI Assistant is online!"}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
